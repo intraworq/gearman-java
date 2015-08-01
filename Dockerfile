@@ -2,9 +2,20 @@ FROM java:8-jre
 
 MAINTAINER "Bolek Tekielski" bolek@vault13.pl
 
-COPY gearman-server-0.8.11-20150731.182506-1.jar /opt/gearman/bin/gearman-server-0.8.11-20150731.182506-1.jar
-COPY config.yml /opt/gearman/etc/config.yml
+RUN apt-get update \
+  	&& apt-get install --no-install-recommends supervisord \
+  	&& LINK = $(wget -qO- https://raw.githubusercontent.com/intraworq/gearman-java/master/current.version.link) \
+  	&& mkdir -p /opt/gearman/{etc,bin} \
+  	&& wget -q -O /opt/gearman/bin/gearman-server.jar $(LINK)
 
+COPY config.yml /opt/gearman/etc/config.yml
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+RUN mkdir -p /var/log/supervisor \
+  && chgrp staff /var/log/supervisor \
+  && chmod g+w /var/log/supervisor \
+  && chgrp staff /etc/supervisor/conf.d/supervisord.conf
+  
 EXPOSE 4730 8080
 
-CMD ["java", "-jar", "/opt/gearman/bin/gearman-server-0.8.11-20150731.182506-1.jar", "/opt/gearman/etc/config.yml"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
